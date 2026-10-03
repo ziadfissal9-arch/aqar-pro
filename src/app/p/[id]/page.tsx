@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { buttonClass, Field, inputClass, Section, TopBar } from "@/components/ui";
 import { fmt, investment, plotArea } from "@/lib/finance";
 import { sideFacing, sideLengths, type LatLng } from "@/lib/geo";
+import { sampleProperty } from "@/lib/sample";
 import { compressImage, getProperty, saveProperty } from "@/lib/store";
 import type { Property } from "@/lib/types";
 
@@ -32,7 +33,8 @@ export default function EditProperty() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    getProperty(id).then((x) => setP(x ?? null));
+    // "/p/demo" opens the sample property on any device so it can be tried straight from a link
+    getProperty(id).then((x) => setP(x ?? (id === "demo" ? sampleProperty("demo") : null)));
   }, [id]);
 
   const update = useCallback((patch: Partial<Property>) => {
