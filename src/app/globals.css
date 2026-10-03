@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f3ec;
+  --surface: #ffffff;
+  --foreground: #16232d;
+  --muted: #6b7680;
+  --line: #e7e1d4;
+  --navy: #0e2a3b;
+  --navy-2: #17405a;
+  --gold: #c49a4a;
+  --gold-2: #e6c98d;
+  --gold-soft: #f6ecd8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-navy: var(--navy);
+  --color-navy-2: var(--navy-2);
+  --color-gold: var(--gold);
+  --color-gold-2: var(--gold-2);
+  --color-gold-soft: var(--gold-soft);
+  --font-sans: var(--font-arabic);
+  --shadow-card: 0 1px 2px rgb(14 42 59 / 0.04), 0 6px 20px rgb(14 42 59 / 0.06);
+  --shadow-lift: 0 2px 6px rgb(14 42 59 / 0.06), 0 20px 50px rgb(14 42 59 / 0.12);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+.ltr-num {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Leaflet inside RTL pages */
+.leaflet-container {
+  direction: ltr;
+  font-family: var(--font-arabic), sans-serif;
+}
+
+/* ---- printed report (A4) ---------------------------------------------- */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+.report-page {
+  width: 210mm;
+  height: 297mm;
+  position: relative;
+  overflow: hidden;
+  background: #faf7f1;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@media screen {
+  .report-page {
+    box-shadow: var(--shadow-lift);
+    margin: 0 auto 24px;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .report-page {
+    page-break-after: always;
+    break-after: page;
+    margin: 0;
+    box-shadow: none;
+  }
+  .report-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .report-scale {
+    zoom: 1 !important;
+    margin: 0 !important;
+  }
+}
