@@ -1,37 +1,56 @@
 "use client";
 
-// Everything is stored in the browser (IndexedDB) so the demo needs no account or server database.
-import { createStore, del, get, set, values } from "idb-keyval";
-import { DEFAULT_OFFICE, type Office, type Property } from "./types";
+// Browser-side access to the server API. Everything is stored in the office's database.
+import type { Comparable, Distance, Landmark, Office, Photo, Property, Street } from "./types";
 
-const props = typeof window !== "undefined" ? createStore("aqar-pro", "properties") : undefined;
-const meta = typeof window !== "undefined" ? createStore("aqar-pro-meta", "meta") : undefined;
-
-export async function listProperties(): Promise<Property[]> {
-  const all = (await values<Property>(props)) ?? [];
-  return all.sort((a, b) => b.updatedAt - a.updatedAt);
+async function call<T>(url: string, init?: RequestInit & { json?: unknown }): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    headers: init?.json !== undefined ? { "content-type": "application/json" } : undefined,
+    body: init?.json !== undefined ? JSON.stringify(init.json) : init?.body,
+  });
+  if (res.status === 401) {
+    window.location.href = "/login";
+    throw new Error("unauthorized");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || "حدث خطأ، حاول مرة أخرى");
+  return data as T;
 }
 
-export const getProperty = (id: string) => get<Property>(id, props);
+export const listProperties = () => call<Property[]>("/api/properties");
+export const getProperty = (id: string) => call<Property>(`/api/properties/${id}`).catch(() => null);
+export const createProperty = (sample = false) => call<{ id: string }>("/api/properties", { method: "POST", json: { sample } });
+export const saveProperty = (p: Property) => call<{ ok: true }>(`/api/properties/${p.id}`, { method: "PUT", json: p });
+export const deleteProperty = (id: string) => call<{ ok: true }>(`/api/properties/${id}`, { method: "DELETE" });
 
-export async function saveProperty(p: Property): Promise<void> {
-  await set(p.id, { ...p, updatedAt: Date.now() }, props);
+export const uploadPhoto = (propertyId: string, group: "property" | "building", dataUrl: string) =>
+  call<Photo>(`/api/properties/${propertyId}/photos`, { method: "POST", json: { group, dataUrl } });
+export const deletePhoto = (id: number) => call<{ ok: true }>(`/api/photos/${id}`, { method: "DELETE" });
+export const reorderPhotos = (propertyId: string, ids: number[]) => call<{ ok: true }>(`/api/properties/${propertyId}/photos`, { method: "PATCH", json: { ids } });
+
+export const getOffice = () => call<Office>("/api/office");
+export const saveOffice = (o: Office) => call<Office>("/api/office", { method: "PUT", json: o });
+
+export const listComparables = (city?: string) => call<Comparable[]>(`/api/comparables${city ? `?city=${encodeURIComponent(city)}` : ""}`);
+export const addComparable = (c: Omit<Comparable, "id">) => call<Comparable>("/api/comparables", { method: "POST", json: c });
+export const updateComparable = (c: Comparable) => call<Comparable>(`/api/comparables/${c.id}`, { method: "PUT", json: c });
+export const deleteComparable = (id: number) => call<{ ok: true }>(`/api/comparables/${id}`, { method: "DELETE" });
+
+export const listLandmarks = (city?: string) => call<Landmark[]>(`/api/landmarks${city ? `?city=${encodeURIComponent(city)}` : ""}`);
+export const addLandmark = (l: Omit<Landmark, "id">) => call<Landmark>("/api/landmarks", { method: "POST", json: l });
+export const deleteLandmark = (id: number) => call<{ ok: true }>(`/api/landmarks/${id}`, { method: "DELETE" });
+
+export const fetchDistances = (lat: number, lon: number, city: string) => call<Distance[]>("/api/geo/distances", { method: "POST", json: { lat, lon, city } });
+export const fetchStreets = (lat: number, lon: number) => call<Street[]>("/api/geo/streets", { method: "POST", json: { lat, lon } });
+
+export async function logout() {
+  await fetch("/api/auth/logout", { method: "POST" });
+  window.location.href = "/login";
 }
 
-export const deleteProperty = (id: string) => del(id, props);
-
-export async function getOffice(): Promise<Office> {
-  return { ...DEFAULT_OFFICE, ...((await get<Office>("office", meta)) ?? {}) };
-}
-
-export const saveOffice = (o: Office) => set("office", o, meta);
-
-export function newId(): string {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-/** Downscale an image file to a JPEG data URL so photos stay small in browser storage. */
-export function compressImage(file: File, max = 1600, quality = 0.82): Promise<string> {
+/** Downscale an image file to a JPEG data URL before uploading. */
+export function compressImage(file: File, max = 1800, quality = 0.84): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {

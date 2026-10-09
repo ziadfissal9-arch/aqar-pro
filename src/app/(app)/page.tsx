@@ -1,28 +1,27 @@
 "use client";
 
-import { Building2, FileText, Map, PenLine, Plus, Ruler, Settings2, Sparkles, Trash2, TrendingUp } from "lucide-react";
+import { Building2, FileText, Map, PenLine, Plus, Route, Ruler, Scale, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import OfficeForm from "@/components/OfficeForm";
+import AppNav from "@/components/AppNav";
 import { buttonClass, TopBar } from "@/components/ui";
 import { fmt, investment } from "@/lib/finance";
-import { sampleProperty } from "@/lib/sample";
-import { deleteProperty, getOffice, listProperties, newId, saveProperty } from "@/lib/store";
-import { DEFAULT_OFFICE, emptyProperty, type Office, type Property } from "@/lib/types";
+import { createProperty, deleteProperty, getOffice, listProperties } from "@/lib/store";
+import { DEFAULT_OFFICE, type Office, type Property } from "@/lib/types";
 
 const FEATURES = [
-  { icon: Map, title: "خرائط حقيقية", text: "صورة قمر صناعي وخريطة شوارع ورموز QR تفتح الموقع في Google Maps وGoogle Earth" },
-  { icon: Ruler, title: "مخطط مساحي تلقائي", text: "ارسم حدود القطعة على الخريطة وتُحسب الأطوال والمساحة وإحداثيات الأركان فورًا" },
-  { icon: TrendingUp, title: "تحليل استثماري", text: "سيناريوهات احتفاظ وتطوير وتأجير بعوائدها ورسم بياني لنمو القيمة" },
-  { icon: Sparkles, title: "وصف تسويقي آلي", text: "نص تسويقي احترافي مكتوب من بيانات العقار، قابل للتعديل قبل التصدير" },
+  { icon: Map, title: "خرائط بأسماء الشوارع", text: "قمر صناعي بحدود القطعة وأسماء الشوارع، وزر يفتح الموقع مباشرة في قوقل ماب" },
+  { icon: Route, title: "المسافات لأبرز المعالم", text: "مسافة القيادة والوقت للمطار والمركز المالي والبوليفارد وغيرها تلقائيًا" },
+  { icon: Scale, title: "المقارنات السعرية", text: "صفقات وعروض الأراضي والمباني والإيجارات محفوظة في قاعدة بياناتك" },
+  { icon: Ruler, title: "مخطط مساحي تلقائي", text: "ارسم حدود القطعة وتُحسب الأطوال والمساحة وإحداثيات الأركان فورًا" },
 ];
 
 export default function Home() {
   const router = useRouter();
   const [items, setItems] = useState<Property[] | null>(null);
   const [office, setOffice] = useState<Office>(DEFAULT_OFFICE);
-  const [editingOffice, setEditingOffice] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     listProperties().then(setItems);
@@ -30,8 +29,9 @@ export default function Home() {
   }, []);
 
   async function create(sample: boolean) {
-    const id = newId();
-    await saveProperty(sample ? sampleProperty(id) : emptyProperty(id));
+    if (creating) return;
+    setCreating(true);
+    const { id } = await createProperty(sample);
     router.push(`/p/${id}`);
   }
 
@@ -44,9 +44,7 @@ export default function Home() {
   return (
     <>
       <TopBar light>
-        <button onClick={() => setEditingOffice(true)} className="flex h-10 items-center gap-2 rounded-xl px-3 text-sm text-white/85 hover:bg-white/10">
-          <Settings2 className="h-4 w-4" /> <span className="hidden sm:inline">بيانات المكتب</span>
-        </button>
+        <AppNav light />
       </TopBar>
 
       <section className="bg-grid relative overflow-hidden bg-navy text-white">
@@ -54,7 +52,7 @@ export default function Home() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:py-20 lg:grid-cols-[1.1fr_1fr]">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3.5 py-1 text-sm text-gold-2">
-              <Sparkles className="h-4 w-4" /> ملفات تسويق عقاري بالذكاء الاصطناعي
+              <Sparkles className="h-4 w-4" /> {office.name}
             </span>
             <h1 className="mt-5 text-4xl leading-[1.3] font-bold sm:text-5xl">
               ملف تسويقي استثماري
@@ -89,7 +87,7 @@ export default function Home() {
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-bold text-navy">عقاراتك</h2>
-            <p className="text-sm text-muted">محفوظة على هذا الجهاز • المكتب: {office.name}</p>
+            <p className="text-sm text-muted">محفوظة في قاعدة بيانات مكتبك • المكتب: {office.name}</p>
           </div>
           <button onClick={() => create(false)} className={buttonClass("primary")}>
             <Plus className="h-4 w-4" /> إضافة عقار
@@ -125,7 +123,7 @@ export default function Home() {
                       <p className="mt-0.5 text-sm text-muted">{[p.district && `حي ${p.district}`, p.city].filter(Boolean).join("، ") || "الموقع غير محدد"}</p>
                     </div>
                     <span className="shrink-0 rounded-full bg-gold-soft px-2.5 py-0.5 text-xs font-semibold text-[#8d6a2a]">
-                      {p.type} • {p.use}
+                      {p.kind === "building" ? "أرض ومبنى" : p.type} • {p.use}
                     </span>
                   </div>
                   <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
@@ -156,18 +154,7 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="border-t border-line py-8 text-center text-sm text-muted">عقار برو • نسخة تجريبية للعرض — البيانات تُحفظ على جهازك فقط</footer>
-
-      {editingOffice && (
-        <OfficeForm
-          office={office}
-          onClose={() => setEditingOffice(false)}
-          onSaved={(o) => {
-            setOffice(o);
-            setEditingOffice(false);
-          }}
-        />
-      )}
+      <footer className="border-t border-line py-8 text-center text-sm text-muted">عقار برو • منصة ملفات التسويق العقاري</footer>
     </>
   );
 }

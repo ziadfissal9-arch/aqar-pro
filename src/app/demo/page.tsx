@@ -6,14 +6,14 @@ import PrintButton from "@/components/PrintButton";
 import Report from "@/components/Report";
 import { buttonClass, TopBar } from "@/components/ui";
 import { centroid } from "@/lib/geo";
-import { sampleProperty } from "@/lib/sample";
+import { SAMPLE_COMPARABLES, sampleProperty } from "@/lib/sample";
 import { DEFAULT_OFFICE } from "@/lib/types";
 
 export const metadata = { title: "نموذج ملف تسويقي" };
 
 // Server-rendered sample report: opens instantly on any device and prints cleanly.
 export default async function DemoReport() {
-  const property = sampleProperty("demo");
+  const property = { ...sampleProperty("demo"), comparableIds: SAMPLE_COMPARABLES.map((c) => c.id) };
   const [la, lo] = centroid(property.polygon).map((v) => v.toFixed(6));
   const opts = { margin: 1, width: 240, color: { dark: "#0e2a3b", light: "#ffffff" } };
   const [maps, earth] = await Promise.all([
@@ -36,7 +36,7 @@ export default async function DemoReport() {
       </div>
       <div className="mx-auto max-w-[830px] px-4 py-6 print:p-0">
         <FitA4>
-          <Report property={property} office={DEFAULT_OFFICE} qr={{ maps, earth }} />
+          <Report property={property} office={DEFAULT_OFFICE} qr={{ maps, earth }} comparables={SAMPLE_COMPARABLES} />
         </FitA4>
       </div>
     </>

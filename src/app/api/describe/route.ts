@@ -1,9 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { describePrompt, templateDescription, type DescribeInput } from "@/lib/describe";
+import { requireApiUser } from "@/lib/session";
 
 // Writes the marketing description. Uses Claude when ANTHROPIC_API_KEY is set,
 // otherwise falls back to a template built from the same facts (and says so).
 export async function POST(req: Request) {
+  const u = await requireApiUser();
+  if (u instanceof Response) return u;
   let input: DescribeInput;
   try {
     input = (await req.json()) as DescribeInput;
